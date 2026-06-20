@@ -1,0 +1,17 @@
+[package]
+name = "cash-rate-logger"
+version = "0.1.0"
+authors = ["cppHusky <cpphusky@outlook.com>"]
+edition = "2021"
+description = "A cached cash rate logger"
+repository = "https://github.com/cppHusky/cash-rate-logger"
+license-file = "LICENSE"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+ureq = { version = "2", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dotenvy = "0.15"
+toml = "0.8"
+anyhow = "1"

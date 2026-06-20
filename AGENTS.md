@@ -1,0 +1,272 @@
+# AGENTS.md
+
+This is a project to fetch cash rate and evalute them, with cache functionalities to store history info.
+
+The upstream data is Open Exchange Rates API. Here is an example use case:
+
+```
+$ curl "https://openexchangerates.org/api/latest.json?app_id=${APP_ID}"
+{
+  "disclaimer": "Usage subject to terms: https://openexchangerates.org/terms",
+  "license": "https://openexchangerates.org/license",
+  "timestamp": 1781866800,
+  "base": "USD",
+  "rates": {
+    "AED": 3.6725,
+    "AFN": 63.999997,
+    "ALL": 82.68742,
+    "AMD": 368.443145,
+    "ANG": 1.79,
+    "AOA": 913.116,
+    "ARS": 1451.0007,
+    "AUD": 1.425835,
+    "AWG": 1.8025,
+    "AZN": 1.7,
+    "BAM": 1.687031,
+    "BBD": 2,
+    "BDT": 122.802043,
+    "BGN": 1.706681,
+    "BHD": 0.377194,
+    "BIF": 2982.163926,
+    "BMD": 1,
+    "BND": 1.283781,
+    "BOB": 6.913076,
+    "BRL": 5.1608,
+    "BSD": 1,
+    "BTC": 0.000015995253,
+    "BTN": 94.317204,
+    "BWP": 13.4484,
+    "BYN": 2.769718,
+    "BZD": 2.012037,
+    "CAD": 1.414525,
+    "CDF": 2308.742138,
+    "CHF": 0.806399,
+    "CLF": 0.022885,
+    "CLP": 900.68,
+    "CNH": 6.789997,
+    "CNY": 6.7693,
+    "COP": 3446.588378,
+    "CRC": 453.281562,
+    "CUC": 1,
+    "CUP": 25.75,
+    "CVE": 96.247954,
+    "CZK": 21.135078,
+    "DJF": 177.762377,
+    "DKK": 6.520948,
+    "DOP": 58.553197,
+    "DZD": 133.385,
+    "EGP": 49.9219,
+    "ERN": 15,
+    "ETB": 158.4,
+    "EUR": 0.872405,
+    "FJD": 2.24505,
+    "FKP": 0.755598,
+    "GBP": 0.755598,
+    "GEL": 2.65,
+    "GGP": 0.755598,
+    "GHS": 11.202907,
+    "GIP": 0.755598,
+    "GMD": 72.50001,
+    "GNF": 8768.740367,
+    "GTQ": 7.624493,
+    "GYD": 209.303889,
+    "HKD": 7.838672,
+    "HNL": 26.68,
+    "HRK": 6.574695,
+    "HTG": 130.782806,
+    "HUF": 307.863,
+    "IDR": 17803.549998,
+    "ILS": 2.9622,
+    "IMP": 0.755598,
+    "INR": 94.345641,
+    "IQD": 1310,
+    "IRR": 1375250,
+    "ISK": 125.45,
+    "JEP": 0.755598,
+    "JMD": 158.023112,
+    "JOD": 0.709,
+    "JPY": 161.28014286,
+    "KES": 129.45,
+    "KGS": 87.45,
+    "KHR": 4010,
+    "KMF": 424.999927,
+    "KPW": 900,
+    "KRW": 1529.978056,
+    "KWD": 0.308023,
+    "KYD": 0.833672,
+    "KZT": 488.416933,
+    "LAK": 22052.014514,
+    "LBP": 89550,
+    "LKR": 333.681027,
+    "LRD": 182.000023,
+    "LSL": 16.466953,
+    "LYD": 6.375,
+    "MAD": 9.319332,
+    "MDL": 17.350663,
+    "MGA": 4200,
+    "MKD": 53.780375,
+    "MMK": 2099.81,
+    "MNT": 3569.47,
+    "MOP": 8.076114,
+    "MRU": 40.05,
+    "MUR": 47.87,
+    "MVR": 15.45,
+    "MWK": 1737,
+    "MXN": 17.354628,
+    "MYR": 4.1371,
+    "MZN": 63.909994,
+    "NAD": 16.466881,
+    "NGN": 1361.99,
+    "NIO": 36.62,
+    "NOK": 9.695467,
+    "NPR": 150.908218,
+    "NZD": 1.741781,
+    "OMR": 0.384503,
+    "PAB": 1,
+    "PEN": 3.390083,
+    "PGK": 4.388,
+    "PHP": 60.742007,
+    "PKR": 278.35,
+    "PLN": 3.718567,
+    "PYG": 6092.616144,
+    "QAR": 3.6425,
+    "RON": 4.5709,
+    "RSD": 102.374859,
+    "RUB": 73.249332,
+    "RWF": 1463.5,
+    "SAR": 3.752195,
+    "SBD": 8.061424,
+    "SCR": 13.647746,
+    "SDG": 600.5,
+    "SEK": 9.578595,
+    "SGD": 1.291137,
+    "SHP": 0.755598,
+    "SLE": 24.75,
+    "SLL": 20969.5,
+    "SOS": 571.5,
+    "SRD": 37.369,
+    "SSP": 130.26,
+    "STD": 22281.8,
+    "STN": 21.45,
+    "SVC": 8.754097,
+    "SYP": 13002,
+    "SZL": 16.226684,
+    "THB": 32.87,
+    "TJS": 9.283859,
+    "TMT": 3.505,
+    "TND": 2.944455,
+    "TOP": 2.40776,
+    "TRY": 46.445172,
+    "TTD": 6.793553,
+    "TWD": 31.6202,
+    "TZS": 2625.503,
+    "UAH": 44.96024,
+    "UGX": 3651.188042,
+    "USD": 1,
+    "UYU": 40.199667,
+    "UZS": 12092.727553,
+    "VES": 606.632962,
+    "VND": 26322.833232,
+    "VUV": 119.389,
+    "WST": 2.74422,
+    "XAF": 572.260287,
+    "XAG": 0.01542056,
+    "XAU": 0.00024097,
+    "XCD": 2.70255,
+    "XCG": 1.802986,
+    "XDR": 0.703697,
+    "XOF": 572.260287,
+    "XPD": 0.00078362,
+    "XPF": 104.105631,
+    "XPT": 0.00059248,
+    "YER": 237.112536,
+    "ZAR": 16.487248,
+    "ZMW": 17.894567,
+    "ZWG": 25.3626,
+    "ZWL": 322
+  }
+}
+```
+
+In common case, I can provide my `app_id` in environment (or in `.env` file), and then the api returns a json with cash rates of all currencies. In those, I just care about some of them, which could be defined in config file or command line args. I need to change a custom base currency, but disappointedly I'm not permitted to do that for the API, so I must evaluate it by myself. And then I would like to write a waybar custom plugin, so the cli sould provide option to give waybar tooltip compatible output.
+
+The following document tells how to make this project.
+
+## Reference
+
+Here is an example man page:
+
+```
+NAME
+    cash-rate-logger - cash rate with cache
+
+SYNOPSIS
+    cash-rate-logger [get] [OPTION]...
+
+    cash-rate-logger fetch [OPTION]...
+
+DESCRIPTION
+    This command fetches info from Open Exchange Rates with your own App ID, and returns how much 100 "base currency" can convert to the currency you care.
+
+    You can give these information through command line arguments, or import them with config file.
+
+    You should set the environment variable `OPEN_EXCHANGE_RATE_APP_ID`.
+
+    The logger cache is stored in `${HOME}/.cache/cash-rate-logger/`.
+
+COMMANDS
+    get [-b <code>] [-o <code,...>] [-c <path>] [-t]
+        get the output from cache. do not update cash rate
+
+    fetch
+        fetch current cash rate from API and store into cache. do not output them
+
+OPTIONS
+    -h, --help
+            Show this help message
+
+    -b, --base <code>
+            the base currency you want, Accepts ISO 4217 codes
+
+    -c, --config <path>
+            the config file you want to use
+
+            explicitly specified arguments would overwite those in config file
+
+    -o, --output <code>,...
+            filter the currency codes you want to output.
+
+    --waybar
+            output as waybar tooltip JSON
+
+            by default the output is terminal style.
+```
+
+## FETCH operations
+
+The `fetch` subcommand do two jobs:
+- Fetch the info from API;
+- Store the info to cache dir.
+
+The user may be not allowed to change the base currency, so we don't need to care about that.
+
+After getting the info, process to the following json:
+```json
+{
+    "timestamp":1781866800,
+    "base":"USD",
+    "rates":{
+        "AFN":63.999997,
+        //...
+    }
+}
+```
+And then store it to cache dir named with the timestamp.
+
+Do not filter the result for the user's care. Just record it.
+
+## GET operations
+
+To save the user's API usage, the `get` subcommand just lookup in cache, and returns latest result if available.
+
+You need to evaluate the currencies from 100 base currency, and output them to terminal or waybar plugin.
