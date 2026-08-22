@@ -37,7 +37,7 @@ pub fn format_terminal(entry: &CacheEntry, base: &str, output_filter: &Option<Ve
     let rates = compute_rates(entry, base, output_filter)?;
     let mut out = format!("100 {}:\n", base);
     for (code, value) in &rates {
-        out.push_str(&format!("  {}: {:.2}\n", code, value));
+        out.push_str(&format!("  {}: {:.3} ({:.3})\n", code, value, 10000./value));
     }
     Ok(out)
 }
@@ -45,11 +45,11 @@ pub fn format_terminal(entry: &CacheEntry, base: &str, output_filter: &Option<Ve
 pub fn format_waybar(entry: &CacheEntry, base: &str, output_filter: &Option<Vec<String>>) -> anyhow::Result<String> {
     let rates = compute_rates(entry, base, output_filter)?;
 
-    let first = rates.first().map(|(c, v)| format!("{}: {:.2}", c, v)).unwrap_or_default();
+    let first = rates.first().map(|(c, v)| format!("{}: {:.3} ({:.3})", c, v, 10000./v)).unwrap_or_default();
 
     let header = format!("100 {}:", base);
     let tooltip = std::iter::once(header)
-        .chain(rates.iter().map(|(c, v)| format!("{}: {:.2}", c, v)))
+        .chain(rates.iter().map(|(c, v)| format!("{}: {:.3} ({:.3})", c, v, 10000./v)))
         .collect::<Vec<_>>()
         .join("\n");
 
