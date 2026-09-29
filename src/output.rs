@@ -107,8 +107,8 @@ fn compare_history(
 
 fn direction_arrow(direction: HistoryDirection) -> &'static str {
     match direction {
-        HistoryDirection::High => "↑ than",
-        HistoryDirection::Low => "↓ than",
+        HistoryDirection::High => "↑",
+        HistoryDirection::Low => "↓",
     }
 }
 
@@ -116,7 +116,7 @@ fn history_suffix(config: &HistoryConfig, comparison: Option<HistoryComparison>)
     match comparison {
         Some(comparison) => {
             format!(
-                " {} {:.1}%",
+                " {} than {:.1}%",
                 direction_arrow(config.direction),
                 comparison.percent
             )
@@ -141,7 +141,7 @@ pub fn format_terminal(
             })
             .unwrap_or_default();
         out.push_str(&format!(
-            "  {}: {:.3} ({:.3}){}\n",
+            "  {}: {:.3} ({:.3}) {}\n",
             code,
             value,
             10000. / value,
@@ -198,7 +198,7 @@ pub fn format_waybar(
             let history = history_config
                 .map(|config| history_suffix(config, comparison_for(c)))
                 .unwrap_or_default();
-            format!("{}: {:.3} ({:.3}){}", c, v, 10000. / v, history)
+            format!("{}: {:.3} ({:.3}) {}", c, v, 10000. / v, history)
         })
         .unwrap_or_default();
 
