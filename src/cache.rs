@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheEntry {
     pub timestamp: u64,
     pub base: String,
@@ -21,41 +21,35 @@ fn ensure_cache_dir() -> anyhow::Result<PathBuf> {
     Ok(dir)
 }
 
-pub fn get_latest() -> anyhow::Result<Option<CacheEntry>> {
+pub fn get_history() -> anyhow::Result<Vec<CacheEntry>> {
     let dir = cache_dir();
     if !dir.exists() {
-        return Ok(None);
+        return Ok(Vec::new());
     }
 
-    let mut latest_ts: Option<u64> = None;
+    let mut cache_files = Vec::new();
     for entry in std::fs::read_dir(&dir).context("failed to read cache directory")? {
         let entry = entry?;
         let fname = entry.file_name();
         let name = fname.to_string_lossy();
         if let Some(stem) = name.strip_suffix(".json") {
             if let Ok(ts) = stem.parse::<u64>() {
-                if let Some(current) = latest_ts {
-                    if ts > current {
-                        latest_ts = Some(ts);
-                    }
-                } else {
-                    latest_ts = Some(ts);
-                }
+                cache_files.push((ts, entry.path()));
             }
         }
     }
 
-    match latest_ts {
-        Some(ts) => {
-            let path = dir.join(format!("{}.json", ts));
+    cache_files.sort_unstable_by_key(|(ts, _)| *ts);
+
+    cache_files
+        .into_iter()
+        .map(|(_, path)| {
             let content = std::fs::read_to_string(&path)
                 .with_context(|| format!("failed to read cache file: {}", path.display()))?;
-            let entry: CacheEntry = serde_json::from_str(&content)
-                .with_context(|| format!("failed to parse cache file: {}", path.display()))?;
-            Ok(Some(entry))
-        }
-        None => Ok(None),
-    }
+            serde_json::from_str(&content)
+                .with_context(|| format!("failed to parse cache file: {}", path.display()))
+        })
+        .collect()
 }
 
 pub fn write(timestamp: u64, entry: &CacheEntry) -> anyhow::Result<()> {

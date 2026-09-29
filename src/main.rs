@@ -1,10 +1,12 @@
-mod config;
 mod cache;
+mod config;
 mod fetch;
 mod output;
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
+
+use crate::config::HistoryDirection;
 
 #[derive(Parser, Debug)]
 #[command(name = "cash-rate-logger", about = "cash rate with cache")]
@@ -12,7 +14,11 @@ struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
 
-    #[arg(short = 'b', long = "base", help = "the base currency you want, Accepts ISO 4217 codes")]
+    #[arg(
+        short = 'b',
+        long = "base",
+        help = "the base currency you want, Accepts ISO 4217 codes"
+    )]
     base: Option<String>,
 
     #[arg(
@@ -28,6 +34,24 @@ struct Cli {
 
     #[arg(long = "waybar", help = "output as waybar tooltip JSON")]
     waybar: bool,
+
+    #[arg(
+        long = "history-direction",
+        visible_alias = "history",
+        value_enum,
+        help = "watch a high or low historical rank"
+    )]
+    history_direction: Option<HistoryDirection>,
+
+    #[arg(
+        long = "history-percent",
+        visible_alias = "history-percentile",
+        help = "percent of history the current value must exceed in the selected direction"
+    )]
+    history_percent: Option<f64>,
+
+    #[arg(long = "history-days", help = "number of previous days to compare")]
+    history_days: Option<u64>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -45,6 +69,15 @@ enum Command {
 
         #[arg(long = "waybar")]
         waybar: bool,
+
+        #[arg(long = "history-direction", visible_alias = "history", value_enum)]
+        history_direction: Option<HistoryDirection>,
+
+        #[arg(long = "history-percent", visible_alias = "history-percentile")]
+        history_percent: Option<f64>,
+
+        #[arg(long = "history-days")]
+        history_days: Option<u64>,
     },
 
     #[command(about = "fetch current cash rate from API and store into cache")]
@@ -62,11 +95,22 @@ fn main() -> anyhow::Result<()> {
                 .context("OPEN_EXCHANGE_RATE_APP_ID not set in environment or .env file")?;
             fetch::fetch_and_cache(&app_id)?;
         }
-        Some(Command::Get { base, output, config, waybar }) => {
+        Some(Command::Get {
+            base,
+            output,
+            config,
+            waybar,
+            history_direction,
+            history_percent,
+            history_days,
+        }) => {
             let cfg = config::Config::load(
                 first_some(base.clone(), cli.base.clone()),
                 first_some(output.clone(), cli.output.clone()),
                 first_some(config.as_deref(), cli.config.as_deref()),
+                first_some(*history_days, cli.history_days),
+                first_some(*history_percent, cli.history_percent),
+                first_some(*history_direction, cli.history_direction),
             )?;
             run_get(&cfg, *waybar || cli.waybar)?;
         }
@@ -75,6 +119,9 @@ fn main() -> anyhow::Result<()> {
                 cli.base.clone(),
                 cli.output.clone(),
                 cli.config.as_deref(),
+                cli.history_days,
+                cli.history_percent,
+                cli.history_direction,
             )?;
             run_get(&cfg, cli.waybar)?;
         }
@@ -88,12 +135,34 @@ fn first_some<T>(a: Option<T>, b: Option<T>) -> Option<T> {
 }
 
 fn run_get(cfg: &config::Config, waybar: bool) -> anyhow::Result<()> {
-    let entry = cache::get_latest()?.context("no cached data found. run 'fetch' first")?;
+    let history = cache::get_history()?;
+    let entry = history
+        .last()
+        .cloned()
+        .context("no cached data found. run 'fetch' first")?;
 
     if waybar {
-        print!("{}", output::format_waybar(&entry, &cfg.base, &cfg.output)?);
+        print!(
+            "{}",
+            output::format_waybar(
+                &entry,
+                &history,
+                &cfg.base,
+                &cfg.output,
+                cfg.history.as_ref(),
+            )?
+        );
     } else {
-        print!("{}", output::format_terminal(&entry, &cfg.base, &cfg.output)?);
+        print!(
+            "{}",
+            output::format_terminal(
+                &entry,
+                &history,
+                &cfg.base,
+                &cfg.output,
+                cfg.history.as_ref(),
+            )?
+        );
     }
 
     Ok(())

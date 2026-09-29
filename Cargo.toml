@@ -1,6 +1,6 @@
 [package]
 name = "cash-rate-logger"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["cppHusky <cpphusky@outlook.com>"]
 edition = "2021"
 description = "A cached cash rate logger"
