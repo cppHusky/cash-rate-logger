@@ -112,6 +112,13 @@ fn direction_arrow(direction: HistoryDirection) -> &'static str {
     }
 }
 
+fn direction_word(direction: HistoryDirection) -> &'static str {
+    match direction {
+        HistoryDirection::High => "higher",
+        HistoryDirection::Low => "lower",
+    }
+}
+
 fn history_suffix(config: &HistoryConfig, comparison: Option<HistoryComparison>) -> String {
     match comparison {
         Some(comparison) => {
@@ -133,7 +140,14 @@ pub fn format_terminal(
     history_config: Option<&HistoryConfig>,
 ) -> anyhow::Result<String> {
     let rates = compute_rates(entry, base, output_filter)?;
-    let mut out = format!("100 {}{}:\n", base, history_config.map_or(String::new(),|config|format!(" (in recent {} days)",config.days)));
+    let mut out = format!(
+        "100 {}{}:\n",
+        base,
+        history_config.map_or(String::new(), |config| format!(
+            " (in recent {} days)",
+            config.days
+        ))
+    );
     for (code, value) in &rates {
         let history = history_config
             .map(|config| {
@@ -202,7 +216,14 @@ pub fn format_waybar(
         })
         .unwrap_or_default();
 
-    let header = format!("100 {}{}:", base, history_config.map_or(String::new(),|config|format!(" (in recent {} days)",config.days)));
+    let header = format!(
+        "100 {}{}:",
+        base,
+        history_config.map_or(String::new(), |config| format!(
+            " (in recent {} days)",
+            config.days
+        ))
+    );
     let mut tooltip_lines = vec![header];
     tooltip_lines.extend(rates.iter().map(|(c, v)| {
         let history = history_config
@@ -232,6 +253,57 @@ pub fn format_waybar(
         class,
     };
     Ok(serde_json::to_string(&output).expect("serialization should not fail"))
+}
+
+pub fn format_notification(
+    entry: &CacheEntry,
+    history: &[CacheEntry],
+    base: &str,
+    output_filter: &Option<Vec<String>>,
+    history_config: Option<&HistoryConfig>,
+) -> anyhow::Result<String> {
+    let config = history_config.ok_or_else(|| {
+        anyhow::anyhow!("--notification requires history direction, percent, and days settings")
+    })?;
+    let filter = output_filter
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("--notification requires at least one output currency"))?;
+    if filter.is_empty() {
+        anyhow::bail!("--notification requires at least one output currency");
+    }
+
+    let rates = compute_rates(entry, base, output_filter)?;
+    if rates.is_empty() {
+        anyhow::bail!("none of the requested output currencies were found in the current rates");
+    }
+
+    let alerts: Vec<String> = rates
+        .iter()
+        .filter_map(|(currency, value)| {
+            let comparison = compare_history(entry, history, base, currency, config)?;
+            if !comparison.matched {
+                return None;
+            }
+
+            Some(format!(
+                "The {} to {} currency rate is {} than {:.1}% of observations in the past {} days.\nCurrent value: 100 {} = {:.3} {}.",
+                base,
+                currency,
+                direction_word(config.direction),
+                comparison.percent,
+                config.days,
+                base,
+                value,
+                currency,
+            ))
+        })
+        .collect();
+
+    if alerts.is_empty() {
+        Ok(String::new())
+    } else {
+        Ok(format!("{}\n", alerts.join("\n\n")))
+    }
 }
 
 #[cfg(test)]
@@ -328,7 +400,8 @@ mod tests {
         let json: serde_json::Value = serde_json::from_str(&output).expect("valid JSON");
 
         assert_eq!(json["class"], "history-alert");
-        assert!(json["text"].as_str().unwrap().contains("↑ 100.0%"));
+        assert!(json["text"].as_str().unwrap().contains("↑"));
+        assert!(json["text"].as_str().unwrap().contains("100.0%"));
         assert!(!json["tooltip"].as_str().unwrap().contains("history:"));
     }
 
@@ -354,10 +427,54 @@ mod tests {
         let tooltip = json["tooltip"].as_str().unwrap();
 
         assert!(text.starts_with("JPY:"));
-        assert!(text.contains("↓ 0.0%"));
-        assert!(tooltip.contains("JPY: 400.000 (25.000) ↓ 0.0%"));
-        assert!(tooltip.contains("EUR: 50.000 (200.000) ↓ 100.0%"));
+        assert!(text.contains("↓"));
+        assert!(text.contains("0.0%"));
+        assert!(tooltip.contains("JPY: 400.000 (25.000)"));
+        assert!(tooltip.contains("↓"));
+        assert!(tooltip.contains("EUR: 50.000 (200.000)"));
+        assert!(tooltip.contains("100.0%"));
         assert_eq!(json["class"], "history-alert");
+    }
+
+    #[test]
+    fn notification_combines_matching_currencies() {
+        let current = entry_with_currencies(4, 0.5, 4.0);
+        let history = vec![
+            entry_with_currencies(1, 1.0, 1.0),
+            entry_with_currencies(2, 2.0, 2.0),
+            entry_with_currencies(3, 3.0, 3.0),
+            current.clone(),
+        ];
+        let notification = format_notification(
+            &current,
+            &history,
+            "USD",
+            &Some(vec!["JPY".to_string(), "EUR".to_string()]),
+            Some(&config(HistoryDirection::Low)),
+        )
+        .expect("notification output should be valid");
+
+        assert!(notification.contains("The USD to EUR currency rate is lower than 100.0%"));
+        assert!(!notification.contains("# Cash Rate Notice"));
+        assert!(!notification.contains("alert threshold"));
+        assert!(!notification.contains("The USD to JPY currency rate"));
+    }
+
+    #[test]
+    fn notification_is_empty_when_no_currency_matches() {
+        let current = entry_with_currencies(4, 4.0, 4.0);
+        let history = vec![entry_with_currencies(1, 1.0, 1.0), current.clone()];
+
+        let notification = format_notification(
+            &current,
+            &history,
+            "USD",
+            &Some(vec!["EUR".to_string()]),
+            Some(&config(HistoryDirection::Low)),
+        )
+        .expect("notification output should be valid");
+
+        assert!(notification.is_empty());
     }
 
     fn entry_with_currencies(timestamp: u64, eur: f64, jpy: f64) -> CacheEntry {

@@ -35,6 +35,9 @@ struct Cli {
     #[arg(long = "waybar", help = "output as waybar tooltip JSON")]
     waybar: bool,
 
+    #[arg(long = "notification", help = "output a system notification message")]
+    notification: bool,
+
     #[arg(
         long = "history-direction",
         visible_alias = "history",
@@ -70,6 +73,9 @@ enum Command {
         #[arg(long = "waybar")]
         waybar: bool,
 
+        #[arg(long = "notification")]
+        notification: bool,
+
         #[arg(long = "history-direction", visible_alias = "history", value_enum)]
         history_direction: Option<HistoryDirection>,
 
@@ -103,6 +109,7 @@ fn main() -> anyhow::Result<()> {
             history_direction,
             history_percent,
             history_days,
+            notification,
         }) => {
             let cfg = config::Config::load(
                 first_some(base.clone(), cli.base.clone()),
@@ -112,7 +119,11 @@ fn main() -> anyhow::Result<()> {
                 first_some(*history_percent, cli.history_percent),
                 first_some(*history_direction, cli.history_direction),
             )?;
-            run_get(&cfg, *waybar || cli.waybar)?;
+            run_get(
+                &cfg,
+                *waybar || cli.waybar,
+                *notification || cli.notification,
+            )?;
         }
         None => {
             let cfg = config::Config::load(
@@ -123,7 +134,7 @@ fn main() -> anyhow::Result<()> {
                 cli.history_percent,
                 cli.history_direction,
             )?;
-            run_get(&cfg, cli.waybar)?;
+            run_get(&cfg, cli.waybar, cli.notification)?;
         }
     }
 
@@ -134,14 +145,27 @@ fn first_some<T>(a: Option<T>, b: Option<T>) -> Option<T> {
     a.or(b)
 }
 
-fn run_get(cfg: &config::Config, waybar: bool) -> anyhow::Result<()> {
+fn run_get(cfg: &config::Config, waybar: bool, notification: bool) -> anyhow::Result<()> {
     let history = cache::get_history()?;
     let entry = history
         .last()
         .cloned()
         .context("no cached data found. run 'fetch' first")?;
 
-    if waybar {
+    if waybar && notification {
+        anyhow::bail!("--waybar and --notification cannot be used together");
+    } else if notification {
+        print!(
+            "{}",
+            output::format_notification(
+                &entry,
+                &history,
+                &cfg.base,
+                &cfg.output,
+                cfg.history.as_ref(),
+            )?
+        );
+    } else if waybar {
         print!(
             "{}",
             output::format_waybar(

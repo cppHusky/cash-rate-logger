@@ -49,7 +49,7 @@ history percentage and arrow in the tooltip. The Waybar class becomes
 }
 ```
 
-When the selected condition matches, the JSON output has the class
+When any displayed currency matches, the JSON output has the class
 `history-alert`; otherwise it has the class `normal`. Color it in the Waybar
 stylesheet:
 
@@ -58,3 +58,27 @@ stylesheet:
     color: #98c379;
 }
 ```
+
+## Cron notifications
+
+Use `--notification` to produce one combined notification message for every
+selected currency that matches the history condition. The output is empty when
+no currency matches, including when only one currency was selected:
+
+```sh
+message=$(cash-rate-logger get \
+    --base CNY \
+    --output JPY,EUR \
+    --history-direction low \
+    --history-percent 95 \
+    --history-days 7 \
+    --notification)
+
+if [ -n "$message" ]; then
+    notify-send --app-name="cash-rate-logger" "Cash Rate Notice" "$message"
+fi
+```
+
+Notification mode requires an output filter and all history settings. It does
+not call `notify-send` itself, so it can also be used by other notification
+systems.
