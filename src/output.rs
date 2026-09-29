@@ -133,7 +133,7 @@ pub fn format_terminal(
     history_config: Option<&HistoryConfig>,
 ) -> anyhow::Result<String> {
     let rates = compute_rates(entry, base, output_filter)?;
-    let mut out = format!("100 {}:\n", base);
+    let mut out = format!("100 {}{}:\n", base, history_config.map_or(String::new(),|config|format!(" (in recent {} days)",config.days)));
     for (code, value) in &rates {
         let history = history_config
             .map(|config| {
@@ -202,7 +202,7 @@ pub fn format_waybar(
         })
         .unwrap_or_default();
 
-    let header = format!("100 {}:", base);
+    let header = format!("100 {}{}:", base, history_config.map_or(String::new(),|config|format!(" (in recent {} days)",config.days)));
     let mut tooltip_lines = vec![header];
     tooltip_lines.extend(rates.iter().map(|(c, v)| {
         let history = history_config
