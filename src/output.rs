@@ -286,7 +286,7 @@ pub fn format_notification(
             }
 
             Some(format!(
-                "The {} to {} currency rate is {} than {:.1}% of observations in the past {} days.\nCurrent value: 100 {} = {:.3} {}.",
+                "The {} to {} currency rate is {} than {:.1}% of observations in the past {} days. Current value: 100 {} = {:.3} {}.",
                 base,
                 currency,
                 direction_word(config.direction),
@@ -302,7 +302,7 @@ pub fn format_notification(
     if alerts.is_empty() {
         Ok(String::new())
     } else {
-        Ok(format!("{}\n", alerts.join("\n\n")))
+        Ok(format!("{}\n", alerts.join("\n")))
     }
 }
 
